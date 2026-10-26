@@ -6,7 +6,7 @@
 
 ## 环境
 
-已在 Python 3.10 环境验证。以下命令均从同时包含 `CatBoost_TDI/` 和 `assets/` 的项目根目录执行；本机目录为 `E:\ENVI\2025.6_TDI`：
+已在 Python 3.10 环境验证。新建conda环境并安装需要的包：
 
 ```powershell
 Set-Location 'E:\ENVI\2025.6_TDI'
