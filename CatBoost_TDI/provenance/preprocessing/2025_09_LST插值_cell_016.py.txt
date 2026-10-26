@@ -1,0 +1,128 @@
+import rasterio
+import os
+from datetime import datetime, timezone, timedelta
+
+def parse_and_format_filename(folder_name):
+    """
+    【已更新】从文件夹名称中解析UTC时间和瓦片号，转换为UTC+8，并格式化为新的文件名。
+    例如: S2A_..._20250415T030151_..._T49QGG_... -> L2A_2025_105_110151_T49QGG.dat
+    """
+    try:
+        parts = folder_name.split('_')
+        
+        # 1. 提取时间字符串 (依然是第3个部分)
+        time_str_utc = parts[2]
+        
+        # 2. 【新增】提取瓦片号 (通常是第6个部分)
+        #    S2A_MSIL2A_20250415T030151_N0511_R032_T49QGG_...
+        #    [0]   [1]         [2]         [3]   [4]    [5]
+        tile_id = parts[5]
+
+        # --- 时间转换逻辑保持不变 ---
+        dt_naive = datetime.strptime(time_str_utc, '%Y%m%dT%H%M%S')
+        dt_utc = dt_naive.replace(tzinfo=timezone.utc)
+        utc8_tz = timezone(timedelta(hours=8))
+        dt_utc8 = dt_utc.astimezone(utc8_tz)
+        
+        year = dt_utc8.strftime('%Y')
+        day_of_year = dt_utc8.strftime('%j')
+        time_str = dt_utc8.strftime('%H%M%S')
+        
+        # 3. 【更新】组合成包含瓦片号的新文件名
+        new_filename = f"L2A_{year}_{day_of_year}_{time_str}_{tile_id}.dat"
+        return new_filename
+
+    except (IndexError, ValueError) as e:
+        print(f"    -> 警告: 无法从文件夹名 '{folder_name}' 中完整解析时间和瓦片号。将使用原文件夹名。错误: {e}")
+        return f"{folder_name}_stacked.dat"
+
+# stack_sentinel2_bands 和 batch_process_folders_and_rename 函数无需任何修改，
+# 它们会直接使用上面函数生成的新文件名。
+# 为了完整性，这里将整个脚本一并提供。
+
+def stack_sentinel2_bands(input_dir, output_path):
+    """
+    核心函数：将单个文件夹内的单波段文件合成为一个多波段的.dat文件。
+    """
+    try:
+        band_order = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B8A', 'B9', 'B11', 'B12']
+        band_files = [os.path.join(input_dir, f"{band_name}.img") for band_name in band_order]
+
+        if not os.path.exists(band_files[0]):
+            print(f"    -> 跳过：文件夹内未找到有效的波段文件。")
+            return False
+
+        print(f"    -> 找到波段文件，开始合成...")
+
+        with rasterio.open(band_files[0]) as src0:
+            meta = src0.meta.copy()
+
+        meta.update({'driver': 'ENVI', 'count': len(band_files), 'interleave': 'bsq'})
+
+        with rasterio.open(output_path, 'w', **meta) as dst:
+            for i, band_file in enumerate(band_files, start=1):
+                if not os.path.exists(band_file):
+                    print(f"    -> 错误：波段文件 {os.path.basename(band_file)} 缺失，此文件夹合成失败。")
+                    dst.close()
+                    if os.path.exists(output_path): os.remove(output_path)
+                    if os.path.exists(output_path + ".hdr"): os.remove(output_path + ".hdr")
+                    return False
+                with rasterio.open(band_file) as src:
+                    dst.write_band(i, src.read(1))
+        
+        print(f"    -> 合成成功，文件保存至: {os.path.basename(output_path)}")
+        return True
+
+    except Exception as e:
+        print(f"    -> 处理过程中发生意外错误: {e}")
+        return False
+
+def batch_process_folders_and_rename(root_directory):
+    """
+    主函数：批量处理，创建输出文件夹，并根据时间和瓦片号重命名文件。
+    """
+    print(f"开始扫描根目录: {root_directory}")
+
+    output_dir = os.path.join(root_directory, "stacked_dat_output")
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"所有合成文件将保存在: {output_dir}\n")
+    
+    try:
+        sub_items = os.listdir(root_directory)
+    except FileNotFoundError:
+        print(f"错误：指定的根目录不存在！请检查路径：{root_directory}")
+        return
+
+    processed_count = 0
+    skipped_count = 0
+
+    for item_name in sub_items:
+        item_path = os.path.join(root_directory, item_name)
+        
+        if os.path.isdir(item_path) and item_name != "stacked_dat_output":
+            print(f"正在处理文件夹: {item_name}")
+            
+            new_filename = parse_and_format_filename(item_name)
+            full_output_path = os.path.join(output_dir, new_filename)
+            
+            # 【新增】检查输出文件是否已存在，避免重复处理
+            if os.path.exists(full_output_path):
+                print(f"    -> 跳过：输出文件 '{new_filename}' 已存在。")
+                skipped_count += 1
+                print("-" * 70)
+                continue
+
+            success = stack_sentinel2_bands(item_path, full_output_path)
+            if success:
+                processed_count += 1
+            else:
+                skipped_count += 1
+            print("-" * 70)
+
+    print("\n🎉 全部处理完成！")
+    print(f"总计：成功处理 {processed_count} 个文件夹，跳过/失败 {skipped_count} 个文件夹。")
+
+# --- 主程序 ---
+if __name__ == "__main__":
+    root_dir = r"E:\ENVI\2024_11_LST_Research\download\sentinel2\resampling"
+    batch_process_folders_and_rename(root_dir)

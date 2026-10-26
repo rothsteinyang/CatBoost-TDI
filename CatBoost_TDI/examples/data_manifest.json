@@ -1,0 +1,414 @@
+{
+  "schema_version": 1,
+  "data_root": "../../assets",
+  "roi": "../../assets/region/study_area.shp",
+  "crop_to_roi": true,
+  "static_features": {
+    "EULUC": {
+      "path": "../../assets/static/EULUC.tif"
+    },
+    "DEM": {
+      "path": "../../assets/static/DEM.tif"
+    },
+    "TH": {
+      "path": "../../assets/static/TH.tif"
+    },
+    "BD": {
+      "path": "../../assets/static/BD.tif"
+    },
+    "BH": {
+      "path": "../../assets/static/BH.tif"
+    },
+    "SVF": {
+      "path": "../../assets/static/SVF.tif"
+    },
+    "AH": {
+      "path": "../../assets/static/AH.tif"
+    },
+    "VNL": {
+      "path": "../../assets/static/VNL.tif"
+    },
+    "LCZ": {
+      "path": "../../assets/static/LCZ.tif"
+    }
+  },
+  "scenes": [
+    {
+      "id": "2019_08_09_T11_14_38",
+      "timestamp_local": "2019-08-09T11:14:38+08:00",
+      "timestamp_utc": "2019-08-09T03:14:38+00:00",
+      "reference": "../../assets/scenes/2019_08_09_T11_14_38/LST.tif",
+      "lst": {
+        "path": "../../assets/scenes/2019_08_09_T11_14_38/LST.tif",
+        "scale": 1.0,
+        "offset": 0.0
+      },
+      "features": {
+        "NDVI": {
+          "path": "../../assets/annual/2019/NDVI.tif"
+        },
+        "NDWI": {
+          "path": "../../assets/annual/2019/NDWI.tif"
+        },
+        "NDBI": {
+          "path": "../../assets/annual/2019/NDBI.tif"
+        },
+        "Albedo": {
+          "path": "../../assets/annual/2019/Albedo.tif"
+        },
+        "Emissivity": {
+          "path": "../../assets/annual/2019/Emissivity.tif"
+        },
+        "LC": {
+          "path": "../../assets/annual/2019/LC.tif"
+        },
+        "TDI": {
+          "path": "../../assets/scenes/2019_08_09_T11_14_38/TDI.tif"
+        }
+      },
+      "lst_options": {
+        "input_unit": "C",
+        "output_unit": "C",
+        "already_screened": true,
+        "threshold": null,
+        "dilation_pixels": 0
+      },
+      "provenance": {
+        "stage": "stored_historical_georeferenced_rasters",
+        "spectral_matching": "same calendar year, explicit paths",
+        "tdi": "original per-scene historical TDI; not rebuilt",
+        "upstream_cloud_qc_and_zenith": "not reverified from raw product"
+      }
+    },
+    {
+      "id": "2021_07_13_T06_06_00",
+      "timestamp_local": "2021-07-13T06:06:00+08:00",
+      "timestamp_utc": "2021-07-12T22:06:00+00:00",
+      "reference": "../../assets/scenes/2021_07_13_T06_06_00/LST.tif",
+      "lst": {
+        "path": "../../assets/scenes/2021_07_13_T06_06_00/LST.tif",
+        "scale": 1.0,
+        "offset": 0.0
+      },
+      "features": {
+        "NDVI": {
+          "path": "../../assets/annual/2021/NDVI.tif"
+        },
+        "NDWI": {
+          "path": "../../assets/annual/2021/NDWI.tif"
+        },
+        "NDBI": {
+          "path": "../../assets/annual/2021/NDBI.tif"
+        },
+        "Albedo": {
+          "path": "../../assets/annual/2021/Albedo.tif"
+        },
+        "Emissivity": {
+          "path": "../../assets/annual/2021/Emissivity.tif"
+        },
+        "LC": {
+          "path": "../../assets/annual/2021/LC.tif"
+        },
+        "TDI": {
+          "path": "../../assets/scenes/2021_07_13_T06_06_00/TDI.tif"
+        }
+      },
+      "lst_options": {
+        "input_unit": "C",
+        "output_unit": "C",
+        "already_screened": true,
+        "threshold": null,
+        "dilation_pixels": 0
+      },
+      "provenance": {
+        "stage": "stored_historical_georeferenced_rasters",
+        "spectral_matching": "same calendar year, explicit paths",
+        "tdi": "original per-scene historical TDI; not rebuilt",
+        "upstream_cloud_qc_and_zenith": "not reverified from raw product"
+      }
+    },
+    {
+      "id": "2021_07_27_T14_54_06",
+      "timestamp_local": "2021-07-27T14:54:06+08:00",
+      "timestamp_utc": "2021-07-27T06:54:06+00:00",
+      "reference": "../../assets/scenes/2021_07_27_T14_54_06/LST.tif",
+      "lst": {
+        "path": "../../assets/scenes/2021_07_27_T14_54_06/LST.tif",
+        "scale": 1.0,
+        "offset": 0.0
+      },
+      "features": {
+        "NDVI": {
+          "path": "../../assets/annual/2021/NDVI.tif"
+        },
+        "NDWI": {
+          "path": "../../assets/annual/2021/NDWI.tif"
+        },
+        "NDBI": {
+          "path": "../../assets/annual/2021/NDBI.tif"
+        },
+        "Albedo": {
+          "path": "../../assets/annual/2021/Albedo.tif"
+        },
+        "Emissivity": {
+          "path": "../../assets/annual/2021/Emissivity.tif"
+        },
+        "LC": {
+          "path": "../../assets/annual/2021/LC.tif"
+        },
+        "TDI": {
+          "path": "../../assets/scenes/2021_07_27_T14_54_06/TDI.tif"
+        }
+      },
+      "lst_options": {
+        "input_unit": "C",
+        "output_unit": "C",
+        "already_screened": true,
+        "threshold": null,
+        "dilation_pixels": 0
+      },
+      "provenance": {
+        "stage": "stored_historical_georeferenced_rasters",
+        "spectral_matching": "same calendar year, explicit paths",
+        "tdi": "original per-scene historical TDI; not rebuilt",
+        "upstream_cloud_qc_and_zenith": "not reverified from raw product"
+      }
+    },
+    {
+      "id": "2021_08_12_T08_44_23",
+      "timestamp_local": "2021-08-12T08:44:23+08:00",
+      "timestamp_utc": "2021-08-12T00:44:23+00:00",
+      "reference": "../../assets/scenes/2021_08_12_T08_44_23/LST.tif",
+      "lst": {
+        "path": "../../assets/scenes/2021_08_12_T08_44_23/LST.tif",
+        "scale": 1.0,
+        "offset": 0.0
+      },
+      "features": {
+        "NDVI": {
+          "path": "../../assets/annual/2021/NDVI.tif"
+        },
+        "NDWI": {
+          "path": "../../assets/annual/2021/NDWI.tif"
+        },
+        "NDBI": {
+          "path": "../../assets/annual/2021/NDBI.tif"
+        },
+        "Albedo": {
+          "path": "../../assets/annual/2021/Albedo.tif"
+        },
+        "Emissivity": {
+          "path": "../../assets/annual/2021/Emissivity.tif"
+        },
+        "LC": {
+          "path": "../../assets/annual/2021/LC.tif"
+        },
+        "TDI": {
+          "path": "../../assets/scenes/2021_08_12_T08_44_23/TDI.tif"
+        }
+      },
+      "lst_options": {
+        "input_unit": "C",
+        "output_unit": "C",
+        "already_screened": true,
+        "threshold": null,
+        "dilation_pixels": 0
+      },
+      "provenance": {
+        "stage": "stored_historical_georeferenced_rasters",
+        "spectral_matching": "same calendar year, explicit paths",
+        "tdi": "original per-scene historical TDI; not rebuilt",
+        "upstream_cloud_qc_and_zenith": "not reverified from raw product"
+      }
+    },
+    {
+      "id": "2023_05_27_T23_33_55",
+      "timestamp_local": "2023-05-27T23:33:55+08:00",
+      "timestamp_utc": "2023-05-27T15:33:55+00:00",
+      "reference": "../../assets/scenes/2023_05_27_T23_33_55/LST.tif",
+      "lst": {
+        "path": "../../assets/scenes/2023_05_27_T23_33_55/LST.tif",
+        "scale": 1.0,
+        "offset": 0.0
+      },
+      "features": {
+        "NDVI": {
+          "path": "../../assets/annual/2023/NDVI.tif"
+        },
+        "NDWI": {
+          "path": "../../assets/annual/2023/NDWI.tif"
+        },
+        "NDBI": {
+          "path": "../../assets/annual/2023/NDBI.tif"
+        },
+        "Albedo": {
+          "path": "../../assets/annual/2023/Albedo.tif"
+        },
+        "Emissivity": {
+          "path": "../../assets/annual/2023/Emissivity.tif"
+        },
+        "LC": {
+          "path": "../../assets/annual/2023/LC.tif"
+        },
+        "TDI": {
+          "path": "../../assets/scenes/2023_05_27_T23_33_55/TDI.tif"
+        }
+      },
+      "lst_options": {
+        "input_unit": "C",
+        "output_unit": "C",
+        "already_screened": true,
+        "threshold": null,
+        "dilation_pixels": 0
+      },
+      "provenance": {
+        "stage": "stored_historical_georeferenced_rasters",
+        "spectral_matching": "same calendar year, explicit paths",
+        "tdi": "original per-scene historical TDI; not rebuilt",
+        "upstream_cloud_qc_and_zenith": "not reverified from raw product"
+      }
+    },
+    {
+      "id": "2023_09_19_T02_24_44",
+      "timestamp_local": "2023-09-19T02:24:44+08:00",
+      "timestamp_utc": "2023-09-18T18:24:44+00:00",
+      "reference": "../../assets/scenes/2023_09_19_T02_24_44/LST.tif",
+      "lst": {
+        "path": "../../assets/scenes/2023_09_19_T02_24_44/LST.tif",
+        "scale": 1.0,
+        "offset": 0.0
+      },
+      "features": {
+        "NDVI": {
+          "path": "../../assets/annual/2023/NDVI.tif"
+        },
+        "NDWI": {
+          "path": "../../assets/annual/2023/NDWI.tif"
+        },
+        "NDBI": {
+          "path": "../../assets/annual/2023/NDBI.tif"
+        },
+        "Albedo": {
+          "path": "../../assets/annual/2023/Albedo.tif"
+        },
+        "Emissivity": {
+          "path": "../../assets/annual/2023/Emissivity.tif"
+        },
+        "LC": {
+          "path": "../../assets/annual/2023/LC.tif"
+        },
+        "TDI": {
+          "path": "../../assets/scenes/2023_09_19_T02_24_44/TDI.tif"
+        }
+      },
+      "lst_options": {
+        "input_unit": "C",
+        "output_unit": "C",
+        "already_screened": true,
+        "threshold": null,
+        "dilation_pixels": 0
+      },
+      "provenance": {
+        "stage": "stored_historical_georeferenced_rasters",
+        "spectral_matching": "same calendar year, explicit paths",
+        "tdi": "original per-scene historical TDI; not rebuilt",
+        "upstream_cloud_qc_and_zenith": "not reverified from raw product"
+      }
+    },
+    {
+      "id": "2024_09_30_T20_45_16",
+      "timestamp_local": "2024-09-30T20:45:16+08:00",
+      "timestamp_utc": "2024-09-30T12:45:16+00:00",
+      "reference": "../../assets/scenes/2024_09_30_T20_45_16/LST.tif",
+      "lst": {
+        "path": "../../assets/scenes/2024_09_30_T20_45_16/LST.tif",
+        "scale": 1.0,
+        "offset": 0.0
+      },
+      "features": {
+        "NDVI": {
+          "path": "../../assets/annual/2024/NDVI.tif"
+        },
+        "NDWI": {
+          "path": "../../assets/annual/2024/NDWI.tif"
+        },
+        "NDBI": {
+          "path": "../../assets/annual/2024/NDBI.tif"
+        },
+        "Albedo": {
+          "path": "../../assets/annual/2024/Albedo.tif"
+        },
+        "Emissivity": {
+          "path": "../../assets/annual/2024/Emissivity.tif"
+        },
+        "LC": {
+          "path": "../../assets/annual/2024/LC.tif"
+        },
+        "TDI": {
+          "path": "../../assets/scenes/2024_09_30_T20_45_16/TDI.tif"
+        }
+      },
+      "lst_options": {
+        "input_unit": "C",
+        "output_unit": "C",
+        "already_screened": true,
+        "threshold": null,
+        "dilation_pixels": 0
+      },
+      "provenance": {
+        "stage": "stored_historical_georeferenced_rasters",
+        "spectral_matching": "same calendar year, explicit paths",
+        "tdi": "original per-scene historical TDI; not rebuilt",
+        "upstream_cloud_qc_and_zenith": "not reverified from raw product"
+      }
+    },
+    {
+      "id": "2024_10_08_T17_34_02",
+      "timestamp_local": "2024-10-08T17:34:02+08:00",
+      "timestamp_utc": "2024-10-08T09:34:02+00:00",
+      "reference": "../../assets/scenes/2024_10_08_T17_34_02/LST.tif",
+      "lst": {
+        "path": "../../assets/scenes/2024_10_08_T17_34_02/LST.tif",
+        "scale": 1.0,
+        "offset": 0.0
+      },
+      "features": {
+        "NDVI": {
+          "path": "../../assets/annual/2024/NDVI.tif"
+        },
+        "NDWI": {
+          "path": "../../assets/annual/2024/NDWI.tif"
+        },
+        "NDBI": {
+          "path": "../../assets/annual/2024/NDBI.tif"
+        },
+        "Albedo": {
+          "path": "../../assets/annual/2024/Albedo.tif"
+        },
+        "Emissivity": {
+          "path": "../../assets/annual/2024/Emissivity.tif"
+        },
+        "LC": {
+          "path": "../../assets/annual/2024/LC.tif"
+        },
+        "TDI": {
+          "path": "../../assets/scenes/2024_10_08_T17_34_02/TDI.tif"
+        }
+      },
+      "lst_options": {
+        "input_unit": "C",
+        "output_unit": "C",
+        "already_screened": true,
+        "threshold": null,
+        "dilation_pixels": 0
+      },
+      "provenance": {
+        "stage": "stored_historical_georeferenced_rasters",
+        "spectral_matching": "same calendar year, explicit paths",
+        "tdi": "original per-scene historical TDI; not rebuilt",
+        "upstream_cloud_qc_and_zenith": "not reverified from raw product"
+      }
+    }
+  ],
+  "note": "Prepared from stored research rasters, not original HDF5/SAFE. Static products retain their historical source years. Time conversion is explicit UTC+8, including date changes."
+}

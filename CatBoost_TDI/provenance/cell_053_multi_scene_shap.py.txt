@@ -1,0 +1,226 @@
+# 批量评估关键变量
+
+import os
+import rasterio
+import numpy as np
+import shap
+import pandas as pd
+from catboost import CatBoostRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+from datetime import datetime
+
+# 设置无效值阈值
+LST_INVALID_THRESHOLD = -200
+
+# 输入输出路径
+input_dir = r"E:\ENVI\2024_12_Cloudless\input\multiband_2025.5.13\multi_data"
+output_dir = r"E:\ENVI\2024_12_Cloudless\output\2025.4\shap重要性排序及变量简化结果"
+os.makedirs(output_dir, exist_ok=True)
+
+# 特征名
+feature_names = ['NDVI', 'NDWI', 'NDBI', 'Albedo', 'Emissivity', 'LC', 'EULUC', 'DEM',
+                 'TH', 'BD', 'BH', 'SVF', 'AH', 'VNL', 'LCZ', 'TDI']
+
+# 定义要测试的 Top-N 特征数量
+top_n_list = [5, 8, 10, 12]
+
+# 创建结果存储的 DataFrame - 性能指标
+results_df = pd.DataFrame(columns=[
+    'Filename', 'DateTime', 'Original_RMSE', 'Original_R2'
+] + [f'Top_{n}_RMSE' for n in top_n_list] + [f'Top_{n}_R2' for n in top_n_list])
+
+# 创建结果存储的 DataFrame - SHAP 重要性
+shap_importance_df = pd.DataFrame(columns=['Filename', 'DateTime'] + 
+                                 [f'{feature}_Rank' for feature in feature_names] + 
+                                 [f'{feature}_Value' for feature in feature_names])
+
+# 获取所有 DAT 文件
+dat_files = [f for f in os.listdir(input_dir) if f.endswith('.dat')]
+
+# 处理每个 DAT 文件
+for i, dat_file in enumerate(dat_files):
+    file_path = os.path.join(input_dir, dat_file)
+    print(f"\n处理文件 ({i+1}/{len(dat_files)}): {dat_file}")
+    
+    try:
+        # 尝试从文件名中提取日期时间信息
+        try:
+            # 假设文件名格式为: YYYY_MM_DD_THH_MM_SS.dat
+            date_parts = dat_file.replace('.dat', '').split('_')
+            if len(date_parts) >= 6:
+                datetime_str = f"{date_parts[0]}-{date_parts[1]}-{date_parts[2]} {date_parts[4]}:{date_parts[5]}"
+            else:
+                datetime_str = "Unknown"
+        except:
+            datetime_str = "Unknown"
+            
+        # 读取多波段 DAT 文件
+        with rasterio.open(file_path) as src:
+            bands = src.read()
+            meta = src.meta
+            
+        # 提取波段
+        LST = bands[0]
+        NDVI = bands[1]
+        NDWI = bands[2]
+        NDBI = bands[3]
+        Albedo = bands[4]
+        Emissivity = bands[5]
+        LC = bands[6]
+        EULUC = bands[7]
+        DEM = bands[8]
+        TH = bands[9]
+        BD = bands[10]
+        BH = bands[11]
+        SVF = bands[12]
+        AH = bands[13]
+        VNL = bands[14]
+        LCZ = bands[15]
+        TDI = bands[16]
+        
+        # 组装数据
+        rows, cols = LST.shape
+        data = np.dstack([NDVI, NDWI, NDBI, Albedo, Emissivity, LC, EULUC, DEM,
+                         TH, BD, BH, SVF, AH, VNL, LCZ, TDI, LST]).reshape(-1, 17)
+        
+        valid_mask = (~np.isnan(data).any(axis=1)) & (data > LST_INVALID_THRESHOLD).all(axis=1)
+        valid_data = data[valid_mask]
+        features = valid_data[:, :-1]
+        response = valid_data[:, -1]
+        
+        # 划分数据集
+        X_train, X_test, y_train, y_test = train_test_split(
+            features, response, test_size=0.2, random_state=42)
+        
+        # 添加列名用于 SHAP
+        X_train_df = pd.DataFrame(X_train, columns=feature_names)
+        X_test_df = pd.DataFrame(X_test, columns=feature_names)
+        
+        # 训练原始模型
+        model = CatBoostRegressor(
+            iterations=8000,
+            learning_rate=0.08,
+            depth=10,
+            eval_metric='RMSE',
+            random_seed=0,
+            verbose=0,
+            early_stopping_rounds=100
+        )
+        model.fit(X_train_df, y_train, eval_set=(X_test_df, y_test), use_best_model=True, plot=False)
+        
+        # 基准模型性能
+        y_pred = model.predict(X_test_df)
+        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+        r2 = r2_score(y_test, y_pred)
+        print(f"[原始模型] RMSE = {rmse:.2f} K, R² = {r2:.2f}")
+        
+        # 计算 SHAP 值并获取平均重要性
+        explainer = shap.Explainer(model)
+        shap_values = explainer(X_train_df)
+        mean_abs_shap = np.abs(shap_values.values).mean(axis=0)
+        shap_ranking = pd.Series(mean_abs_shap, index=feature_names).sort_values(ascending=False)
+        print("\nSHAP 特征重要性排序：")
+        print(shap_ranking)
+        
+        # 存储模型性能结果
+        performance_row = {
+            'Filename': dat_file,
+            'DateTime': datetime_str,
+            'Original_RMSE': rmse,
+            'Original_R2': r2
+        }
+        
+        # 存储 SHAP 重要性结果
+        shap_row = {
+            'Filename': dat_file,
+            'DateTime': datetime_str
+        }
+        
+        # 为每个特征添加排名和值
+        for i, feature in enumerate(feature_names):
+            # 获取该特征在 SHAP 排序中的位置
+            rank = list(shap_ranking.index).index(feature) + 1
+            importance_value = shap_ranking[feature]
+            
+            # 保存特征的排名和重要性值
+            shap_row[f'{feature}_Rank'] = rank
+            shap_row[f'{feature}_Value'] = importance_value
+        
+        # 评估不同 Top-N 特征的模型
+        print("\nTop-N 特征简化模型评估：")
+        for n in top_n_list:
+            top_features = shap_ranking.head(n).index.tolist()
+            
+            X_train_sub = X_train_df[top_features]
+            X_test_sub = X_test_df[top_features]
+            
+            model_sub = CatBoostRegressor(
+                iterations=8000,
+                learning_rate=0.08,
+                depth=10,
+                eval_metric='RMSE',
+                random_seed=0,
+                verbose=0,
+                early_stopping_rounds=100
+            )
+            model_sub.fit(X_train_sub, y_train, eval_set=(X_test_sub, y_test), use_best_model=True, plot=False)
+            
+            y_pred_sub = model_sub.predict(X_test_sub)
+            rmse_sub = np.sqrt(mean_squared_error(y_test, y_pred_sub))
+            r2_sub = r2_score(y_test, y_pred_sub)
+            
+            print(f"  Top-{n} 特征模型: RMSE = {rmse_sub:.2f} K, R² = {r2_sub:.2f}")
+            
+            # 将结果添加到当前行
+            performance_row[f'Top_{n}_RMSE'] = rmse_sub
+            performance_row[f'Top_{n}_R2'] = r2_sub
+        
+        # 添加行到结果 DataFrame
+        results_df = pd.concat([results_df, pd.DataFrame([performance_row])], ignore_index=True)
+        shap_importance_df = pd.concat([shap_importance_df, pd.DataFrame([shap_row])], ignore_index=True)
+    
+    except Exception as e:
+        print(f"处理文件 {dat_file} 时出错: {str(e)}")
+        # 添加错误记录到结果 DataFrame
+        error_row = {
+            'Filename': dat_file,
+            'DateTime': 'Error',
+            'Original_RMSE': np.nan,
+            'Original_R2': np.nan
+        }
+        for n in top_n_list:
+            error_row[f'Top_{n}_RMSE'] = np.nan
+            error_row[f'Top_{n}_R2'] = np.nan
+        
+        results_df = pd.concat([results_df, pd.DataFrame([error_row])], ignore_index=True)
+        
+        # 为 SHAP 重要性表添加错误行
+        error_shap_row = {'Filename': dat_file, 'DateTime': 'Error'}
+        for feature in feature_names:
+            error_shap_row[f'{feature}_Rank'] = np.nan
+            error_shap_row[f'{feature}_Value'] = np.nan
+        
+        shap_importance_df = pd.concat([shap_importance_df, pd.DataFrame([error_shap_row])], ignore_index=True)
+
+# 生成时间戳
+timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+# 保存性能汇总结果到 Excel
+performance_file = os.path.join(output_dir, f"model_performance_summary_{timestamp}.xlsx")
+results_df.to_excel(performance_file, index=False)
+
+# 保存 SHAP 重要性结果到 Excel
+shap_file = os.path.join(output_dir, f"feature_importance_summary_{timestamp}.xlsx")
+shap_importance_df.to_excel(shap_file, index=False)
+
+# 或者将两个表保存到同一个 Excel 文件的不同工作表中
+combined_file = os.path.join(output_dir, f"model_analysis_summary_{timestamp}.xlsx")
+with pd.ExcelWriter(combined_file) as writer:
+    results_df.to_excel(writer, sheet_name='Performance', index=False)
+    shap_importance_df.to_excel(writer, sheet_name='SHAP_Importance', index=False)
+
+print(f"\n分析完成！结果已保存到:")
+print(f"1. 性能指标: {performance_file}")
+print(f"2. 特征重要性: {shap_file}")
+print(f"3. 合并报告: {combined_file}")

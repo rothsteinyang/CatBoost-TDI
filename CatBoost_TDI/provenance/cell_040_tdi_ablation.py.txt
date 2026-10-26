@@ -1,0 +1,134 @@
+import os
+import rasterio
+import numpy as np
+import pandas as pd
+from catboost import CatBoostRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
+# 比较使用与不使用 TDI 特征对地表温度重建模型性能的影响，并评估各自的预测精度。
+
+# 设置路径
+input_dir = r"E:\ENVI\2024_12_Cloudless\input\multiband_2025.5.13\multi_data"
+output_dir = r"E:\ENVI\2024_12_Cloudless\output\2025.4\是否使用TDI对模型的提升"
+os.makedirs(output_dir, exist_ok=True)
+
+# 十折交叉验证训练与评估函数
+def train_and_evaluate(X, y, n_splits=10):
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    
+    rmse_list = []
+    r2_list = []
+
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        model = CatBoostRegressor(
+            iterations=8000,
+            learning_rate=0.08,
+            depth=10,
+            eval_metric='RMSE',
+            random_seed=0,
+            verbose=False,
+            early_stopping_rounds=100
+        )
+
+        model.fit(X_train, y_train, eval_set=(X_test, y_test), use_best_model=True)
+        y_pred = model.predict(X_test)
+
+        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+        r2 = r2_score(y_test, y_pred)
+
+        rmse_list.append(rmse)
+        r2_list.append(r2)
+
+    # 返回均值和标准差
+    return (
+        np.mean(rmse_list), np.std(rmse_list),
+        np.mean(r2_list), np.std(r2_list)
+    )
+
+# 记录所有影像的结果
+results = []
+
+# 遍历所有 tif 文件
+tif_files = [f for f in os.listdir(input_dir) if f.endswith(".dat")]
+for tif_file in tif_files:
+    file_path = os.path.join(input_dir, tif_file)
+    try:
+        print(f"正在处理文件：{tif_file}")  # 打印正在处理的图像
+        with rasterio.open(file_path) as src:
+            bands = src.read()
+
+        # 提取各波段
+        LST = bands[0]   # 目标变量
+        NDVI = bands[1]
+        NDWI = bands[2]   # ❌将不再使用
+        NDBI = bands[3]
+        Albedo = bands[4]
+        Emissivity = bands[5]   # ❌将不再使用
+        LC = bands[6]   # ❌将不再使用
+        EULUC = bands[7]
+        DEM = bands[8]
+        TH = bands[9]   # ❌将不再使用
+        BD = bands[10]   # ❌将不再使用
+        BH = bands[11]   # ❌将不再使用
+        SVF = bands[12]   # ❌将不再使用
+        AH = bands[13]
+        VNL = bands[14]
+        LCZ = bands[15]
+        TDI = bands[16]
+
+        # 堆叠数据
+        data_with_TDI = np.dstack([
+            NDVI, NDBI, Albedo, EULUC, DEM, AH, VNL, LCZ, TDI, LST
+        ]).reshape(-1, 10)
+
+        data_without_TDI = np.dstack([
+            NDVI, NDBI, Albedo, EULUC, DEM, AH, VNL, LCZ, LST
+        ]).reshape(-1, 9)
+
+        # 有效值掩码
+        valid_mask_with = (
+            ~np.isnan(data_with_TDI).any(axis=1) &
+            (data_with_TDI > -200).all(axis=1)
+        )
+        valid_mask_without = (
+            ~np.isnan(data_without_TDI).any(axis=1) &
+            (data_without_TDI > -200).all(axis=1)
+        )
+
+        valid_data_with = data_with_TDI[valid_mask_with]
+        valid_data_without = data_without_TDI[valid_mask_without]
+
+        X_with = valid_data_with[:, :-1]
+        y_with = valid_data_with[:, -1]
+        X_without = valid_data_without[:, :-1]
+        y_without = valid_data_without[:, -1]
+
+        # 模型训练与评估
+        rmse_with, r2_with = train_and_evaluate(X_with, y_with)
+        rmse_without, r2_without = train_and_evaluate(X_without, y_without)
+
+        # 记录结果
+        results.append({
+            "文件名": tif_file,
+            "RMSE_不含TDI": round(rmse_without, 2),
+            "R2_不含TDI": round(r2_without, 2),
+            "RMSE_含TDI": round(rmse_with, 2),
+            "R2_含TDI": round(r2_with, 2),
+            "RMSE_改善": round(rmse_without - rmse_with, 2),
+            "R2_提升": round(r2_with - r2_without, 2)
+        })
+
+        print(f"\n{tif_file} - 完成")
+    except Exception as e:
+        print(f"\n{tif_file} 处理失败: {e}")
+
+# 保存结果为 CSV
+df = pd.DataFrame(results)
+output_csv = os.path.join(output_dir, "TDI_十折.csv")
+df.to_csv(output_csv, index=False, encoding='utf-8-sig')
+
+print("\n所有影像处理完毕，结果已保存至：", output_csv)

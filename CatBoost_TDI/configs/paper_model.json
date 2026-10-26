@@ -1,0 +1,11 @@
+{
+  "iterations": 8000,
+  "learning_rate": 0.08,
+  "depth": 10,
+  "random_seed": 0,
+  "split_seed": 42,
+  "validation_fraction": 0.2,
+  "early_stopping_rounds": 100,
+  "thread_count": -1,
+  "categorical_features": []
+}

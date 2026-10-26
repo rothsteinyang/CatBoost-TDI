@@ -1,0 +1,139 @@
+import os
+import rasterio
+import numpy as np
+import pandas as pd
+from catboost import CatBoostRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+from datetime import datetime
+
+# 设置无效值阈值
+LST_INVALID_THRESHOLD = -200
+
+# 输入输出路径
+input_dir = r"E:\ENVI\2024_12_Cloudless\input\multiband_2025.5.13\multi_data"
+output_dir = r"E:\ENVI\2024_12_Cloudless\output\2025.4\简化模型结果\相对重要性补充结果"
+os.makedirs(output_dir, exist_ok=True)
+
+# 固定特征重要性顺序（由用户提供）
+importance_order = ['TDI', 'VNL', 'DEM', 'AH', 'LCZ', 'EULUC', 'NDVI', 'NDBI', 
+                    'Albedo', 'BH', 'NDWI', 'BD', 'Emissivity', 'SVF', 'TH', 'LC']
+
+# 定义要测试的 Top-N 特征数量，从 Top15 到 Top5
+top_n_list = list(range(15, 4, -1))
+
+# 初始化结果 DataFrame
+results_df = pd.DataFrame(columns=['Filename', 'DateTime', 'Original_RMSE', 'Original_R2'] +
+                          [f'Top_{n}_RMSE' for n in top_n_list] +
+                          [f'Top_{n}_R2' for n in top_n_list])
+
+# 获取所有 DAT 文件
+dat_files = [f for f in os.listdir(input_dir) if f.endswith('.dat')]
+
+for i, dat_file in enumerate(dat_files):
+    file_path = os.path.join(input_dir, dat_file)
+    print(f"\n处理文件 ({i+1}/{len(dat_files)}): {dat_file}")
+    
+    try:
+        # 解析时间
+        try:
+            parts = dat_file.replace('.dat', '').split('_')
+            datetime_str = f"{parts[0]}-{parts[1]}-{parts[2]} {parts[4]}:{parts[5]}" if len(parts) >= 6 else "Unknown"
+        except:
+            datetime_str = "Unknown"
+        
+        # 读取数据
+        with rasterio.open(file_path) as src:
+            bands = src.read()
+        
+        # 解包波段
+        (LST, NDVI, NDWI, NDBI, Albedo, Emissivity, LC, EULUC, DEM,
+         TH, BD, BH, SVF, AH, VNL, LCZ, TDI) = bands
+        
+        # 数据拼接为二维数组
+        data = np.dstack([NDVI, NDWI, NDBI, Albedo, Emissivity, LC, EULUC, DEM,
+                          TH, BD, BH, SVF, AH, VNL, LCZ, TDI, LST]).reshape(-1, 17)
+
+        # 有效样本筛选
+        valid_mask = (~np.isnan(data).any(axis=1)) & (data > LST_INVALID_THRESHOLD).all(axis=1)
+        valid_data = data[valid_mask]
+        features = valid_data[:, :-1]
+        response = valid_data[:, -1]
+
+        # 划分训练测试集
+        X_train, X_test, y_train, y_test = train_test_split(
+            features, response, test_size=0.2, random_state=42)
+        
+        # 构建带列名的 DataFrame
+        full_feature_names = ['NDVI', 'NDWI', 'NDBI', 'Albedo', 'Emissivity', 'LC', 'EULUC', 'DEM',
+                              'TH', 'BD', 'BH', 'SVF', 'AH', 'VNL', 'LCZ', 'TDI']
+        X_train_df = pd.DataFrame(X_train, columns=full_feature_names)
+        X_test_df = pd.DataFrame(X_test, columns=full_feature_names)
+        
+        # 训练原始模型
+        model = CatBoostRegressor(
+            iterations=8000,
+            learning_rate=0.08,
+            depth=10,
+            eval_metric='RMSE',
+            random_seed=0,
+            verbose=0,
+            early_stopping_rounds=100
+        )
+        model.fit(X_train_df, y_train, eval_set=(X_test_df, y_test), use_best_model=True)
+        y_pred = model.predict(X_test_df)
+        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+        r2 = r2_score(y_test, y_pred)
+        print(f"[原始模型] RMSE = {rmse:.4f} K, R² = {r2:.4f}")
+        
+        # 初始化性能记录
+        performance_row = {
+            'Filename': dat_file,
+            'DateTime': datetime_str,
+            'Original_RMSE': rmse,
+            'Original_R2': r2
+        }
+
+        # 构建不同 Top-N 特征模型
+        print("Top-N 特征简化模型评估：")
+        for n in top_n_list:
+            top_features = importance_order[:n]
+            X_train_sub = X_train_df[top_features]
+            X_test_sub = X_test_df[top_features]
+            
+            model_sub = CatBoostRegressor(
+                iterations=8000,
+                learning_rate=0.08,
+                depth=10,
+                eval_metric='RMSE',
+                random_seed=0,
+                verbose=0,
+                early_stopping_rounds=100
+            )
+            model_sub.fit(X_train_sub, y_train, eval_set=(X_test_sub, y_test), use_best_model=True)
+            y_pred_sub = model_sub.predict(X_test_sub)
+            rmse_sub = np.sqrt(mean_squared_error(y_test, y_pred_sub))
+            r2_sub = r2_score(y_test, y_pred_sub)
+            
+            print(f"  Top-{n} 特征模型: RMSE = {rmse_sub:.4f} K, R² = {r2_sub:.4f}")
+            performance_row[f'Top_{n}_RMSE'] = rmse_sub
+            performance_row[f'Top_{n}_R2'] = r2_sub
+
+        results_df = pd.concat([results_df, pd.DataFrame([performance_row])], ignore_index=True)
+    
+    except Exception as e:
+        print(f"处理文件 {dat_file} 时出错: {str(e)}")
+        error_row = {'Filename': dat_file, 'DateTime': 'Error', 'Original_RMSE': np.nan, 'Original_R2': np.nan}
+        for n in top_n_list:
+            error_row[f'Top_{n}_RMSE'] = np.nan
+            error_row[f'Top_{n}_R2'] = np.nan
+        results_df = pd.concat([results_df, pd.DataFrame([error_row])], ignore_index=True)
+
+# 保存结果
+timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+performance_file = os.path.join(output_dir, f"model_performance_summary_Top15-5_{timestamp}.xlsx")
+float_cols = [col for col in results_df.columns if col.endswith('RMSE') or col.endswith('R2')]
+results_df[float_cols] = results_df[float_cols].round(4)
+results_df.to_excel(performance_file, index=False)
+
+print(f"\n分析完成！结果保存于：{performance_file}")

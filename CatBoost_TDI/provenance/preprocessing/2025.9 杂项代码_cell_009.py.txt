@@ -1,0 +1,125 @@
+import os
+import glob
+import rasterio
+from rasterio.warp import reproject, Resampling
+import numpy as np
+
+# --- 1. 用户需要配置的路径 ---
+
+# 原始 LST 影像文件夹
+lst_folder = r"E:\ENVI\resource\ECOSTRESS\ECO_L2T_LSTE_guangzhou_201801_202509\LST"
+
+# 云掩膜文件所在的文件夹
+cloud_mask_folder = r"E:\ENVI\resource\ECOSTRESS\ECO_L2T_LSTE_guangzhou_201801_202509\LST_CloudMask_Output"
+
+# 处理后，保存去云LST影像的新文件夹 (脚本会自动创建)
+output_folder = r"E:\ENVI\resource\ECOSTRESS\ECO_L2T_LSTE_guangzhou_201801_202509\LST_Retrieval_gaped"
+
+
+# --- 2. 脚本主体部分 (通常无需修改) ---
+def align_and_apply_cloud_mask():
+    """
+    处理尺寸不匹配的LST和云掩膜文件，将云掩膜对齐到LST影像上，
+    然后剔除云污染像元。
+    """
+    print("脚本开始执行 (版本：可处理不同尺寸栅格)...")
+    
+    # 检查输入路径
+    if not os.path.isdir(lst_folder):
+        print(f"错误：找不到LST影像文件夹: {lst_folder}")
+        return
+    if not os.path.isdir(cloud_mask_folder):
+        print(f"错误：找不到云掩膜文件夹: {cloud_mask_folder}")
+        return
+
+    # 创建输出文件夹
+    os.makedirs(output_folder, exist_ok=True)
+    print(f"输出文件夹已准备就绪: {output_folder}")
+
+    # 获取所有LST文件列表
+    lst_files = glob.glob(os.path.join(lst_folder, "LST_*.tif"))
+    
+    if not lst_files:
+        print(f"警告：在LST文件夹中未找到任何 'LST_*.tif' 文件。")
+        return
+
+    print(f"共找到 {len(lst_files)} 个LST文件，开始处理...")
+    
+    success_count = 0
+    fail_count = 0
+
+    # 遍历每一个LST文件
+    for lst_filepath in lst_files:
+        basename = os.path.basename(lst_filepath)
+        try:
+            # 构建对应的云掩膜文件路径
+            identifier = basename.replace('LST_', '').replace('.tif', '')
+            cloud_mask_filename = f"CLOUD_{identifier}.tif"
+            cloud_mask_filepath = os.path.join(cloud_mask_folder, cloud_mask_filename)
+
+            # 检查云掩膜文件是否存在
+            if not os.path.exists(cloud_mask_filepath):
+                print(f"  -> 警告: 未找到 {basename} 对应的云掩膜。已跳过。")
+                fail_count += 1
+                continue
+
+            # 使用 rasterio 读取 LST 和云掩膜文件
+            with rasterio.open(lst_filepath) as src_lst:
+                with rasterio.open(cloud_mask_filepath) as src_mask:
+                    
+                    print(f"  -> 正在处理: {basename} ...")
+                    
+                    # 读取LST数据和元数据
+                    lst_data = src_lst.read(1)
+                    profile = src_lst.profile # 输出文件的模板
+
+                    # 【核心修改】创建一个与LST影像相同大小的空数组，用于存放对齐后的掩膜
+                    # 填充值为0，代表默认"无云"
+                    aligned_mask_data = np.zeros(src_lst.shape, dtype=profile['dtype'])
+
+                    # 使用 reproject 将云掩膜数据“画”到这个新的空数组上
+                    # 这会自动处理地理位置对齐和尺寸不匹配的问题
+                    reproject(
+                        source=rasterio.band(src_mask, 1),
+                        destination=aligned_mask_data,
+                        src_transform=src_mask.transform,
+                        src_crs=src_mask.crs,
+                        dst_transform=src_lst.transform,
+                        dst_crs=src_lst.crs,
+                        resampling=Resampling.nearest  # 对掩膜必须用最邻近法
+                    )
+
+                    # 获取或设定NoData值
+                    nodata_value = src_lst.nodata
+                    if nodata_value is None:
+                        nodata_value = -9999.0
+                        profile.update(nodata=nodata_value)
+                    
+                    # 应用对齐后的掩膜：将云区（值为1）的LST像元值设为NoData
+                    cloud_pixel_count = np.sum(aligned_mask_data == 1)
+                    print(f"     检测到 {cloud_pixel_count} 个云像元。")
+                    
+                    lst_data[aligned_mask_data == 1] = nodata_value
+
+                    # 构建输出文件路径
+                    output_filepath = os.path.join(output_folder, basename)
+
+                    # 写入处理后的数据到新文件
+                    with rasterio.open(output_filepath, 'w', **profile) as dst:
+                        dst.write(lst_data, 1)
+            
+            success_count += 1
+
+        except Exception as e:
+            print(f"  -> 处理 {basename} 时发生未知错误: {e}")
+            fail_count += 1
+    
+    print("-" * 50)
+    print("处理完成！")
+    print(f"成功处理: {success_count} 个文件")
+    print(f"失败/跳过: {fail_count} 个文件")
+    print(f"去云后的文件已保存在: {output_folder}")
+
+
+if __name__ == '__main__':
+    align_and_apply_cloud_mask()

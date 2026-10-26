@@ -1,0 +1,178 @@
+import rasterio
+import numpy as np
+import os
+import scipy.ndimage
+import matplotlib.pyplot as plt
+from rasterio.plot import show
+
+def mask_clouds_and_dilate(input_tif, output_tif, threshold, dilation_pixels, visualize=False):
+    """
+    按阈值剔除栅格图像中的像元（例如云），
+    并将剔除区域外扩指定像元，统一设置为 NaN。
+    最后，(可选)显示英文标注的对比图。
+    """
+    
+    print(f"🚀 开始处理文件: {input_tif}")
+    print(f"    阈值: < {threshold} K")
+    print(f"    外扩像元: {dilation_pixels} 像元")
+
+    try:
+        # 1. 打开输入的TIF文件
+        with rasterio.open(input_tif) as src:
+            # 2. 读取元数据和Transform
+            meta = src.profile
+            transform = src.transform 
+            
+            # 3. 读取第一个波段的数据
+            data = src.read(1)
+            original_nodata = src.nodata
+
+            # 4. 转换为浮点型 (float32) 以存储 NaN
+            data_float = data.astype(np.float32)
+
+            # 5. (重要) 处理原始的 nodata 值
+            if original_nodata is not None:
+                print(f"    将原始 nodata 值 ({original_nodata}) 转换为空值 (NaN)")
+                data_float[data == original_nodata] = np.nan
+            
+            # 6. 复制一份用于绘图的原始数据
+            original_data_for_plotting = data_float.copy()
+
+            # --- 核心处理步骤 ---
+            # 7. 创建初始的云掩膜 (DN < 296K)
+            cloud_mask = data_float < threshold
+            initial_cloud_count = np.sum(cloud_mask)
+            
+            dilated_mask = None # 初始化掩膜变量
+            
+            if initial_cloud_count > 0:
+                print(f"    第1步: 发现 {initial_cloud_count} 个云像元 (LST < {threshold} K)。")
+
+                # 8. 外扩(Dilation)掩膜
+                print(f"    第2步: 正在将掩膜区域向外扩展 {dilation_pixels} 像元...")
+                dilated_mask = scipy.ndimage.binary_dilation(
+                    cloud_mask, 
+                    iterations=dilation_pixels
+                )
+                
+                final_mask_count = np.sum(dilated_mask)
+                print(f"    外扩完成。总掩膜像元数: {final_mask_count}。")
+
+                # 9. 将所有掩膜区域（云 + 缓冲区）设置为空值
+                print("    第3步: 正在应用最终掩膜...")
+                data_float[dilated_mask] = np.nan
+            
+            else:
+                print(f"    未发现 LST < {threshold} K 的像元。无需进行外扩。")
+
+            # 10. 更新元数据
+            meta.update(
+                dtype=rasterio.float32,
+                nodata=np.nan,
+                compress='lzw'
+            )
+
+            # --- 11. (新) 创建输出目录 ---
+            # 确保输出TIF的子文件夹存在
+            output_dir = os.path.dirname(output_tif)
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # 12. 写入处理后的数据到新文件
+            with rasterio.open(output_tif, 'w', **meta) as dst:
+                dst.write(data_float, 1)
+
+            print(f"✅ 处理完成，文件已保存到:\n    {output_tif}")
+
+            # --- 13. (更新) 可视化 (使用英文标注) ---
+            if visualize:
+                print("    第4步: 正在生成可视化结果... (请在弹出的窗口查看)")
+                
+                fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 7), sharex=True, sharey=True, dpi=300)
+                
+                # 设置统一的色标范围
+                valid_data = original_data_for_plotting[~np.isnan(original_data_for_plotting)]
+                if valid_data.size > 0:
+                    vmin = np.nanpercentile(valid_data, 2)
+                    vmax = np.nanpercentile(valid_data, 98)
+                else:
+                    vmin, vmax = 290, 320 # 备用值
+
+                # 图1: 原始数据 (英文标题)
+                show(original_data_for_plotting, transform=transform, ax=ax1, 
+                     title='1. Original LST', cmap='plasma', 
+                     vmin=vmin, vmax=vmax)
+                
+                # 图2: 掩膜 (如果存在) (英文标题)
+                if dilated_mask is not None:
+                    show(dilated_mask, transform=transform, ax=ax2, 
+                         title='2. Cloud & Buffer Mask', cmap='binary')
+                else:
+                    # (英文标题)
+                    ax2.set_title('2. No Cloud Mask Found')
+                    ax2.set_aspect('equal')
+                    ax2.set_xticks([])
+                    ax2.set_yticks([])
+
+                # 图3: 最终结果 (英文标题)
+                im = show(data_float, transform=transform, ax=ax3, 
+                          title='3. Masked Result (Clouds Removed)', cmap='plasma', 
+                          vmin=vmin, vmax=vmax)
+
+                # 色标 (已是英文)
+                fig.colorbar(im.images[0], ax=ax3, orientation='vertical', shrink=0.8, label='LST (K)')
+                
+                plt.tight_layout()
+                plt.show() # 显示图像窗口
+
+    except ImportError as e:
+        if 'scipy' in str(e):
+            print("❌ 错误: 需要 'scipy' 库来执行掩膜外扩。")
+            print("    请先安装: pip install scipy")
+        elif 'matplotlib' in str(e):
+            print("❌ 错误: 需要 'matplotlib' 库来执行可视化。")
+            print("    请先安装: pip install matplotlib")
+        else:
+            print(f"❌ 导入错误: {e}")
+    except rasterio.errors.RasterioIOError:
+        print(f"❌ 错误: 无法打开文件。请检查文件路径是否正确:\n    {input_tif}")
+    except Exception as e:
+        print(f"❌ 处理过程中发生未知错误: {e}")
+
+# --- 主程序 ---
+if __name__ == "__main__":
+    
+    # 1. 定义文件路径
+    input_file = r"E:\ENVI\2025_10_LST_Ta\data\LST\raw\LST_2019_221_111438.tif"
+    
+    # 2. 定义参数
+    cloud_threshold = 301    # 云阈值 (K)
+    buffer_pixels = 3        # 外扩的像元数
+    visualize_result = True  # 是否显示可视化窗口
+    
+    # --- 3. (更新) 自动生成输出文件路径 (在新的子文件夹中) ---
+    
+    # 获取原始文件的目录 (E:\... \raw)
+    base_dir = os.path.dirname(input_file) 
+    
+    # 定义新子文件夹的名称
+    output_subdir_name = "cloud_masked_output"
+    
+    # 创建新子文件夹的完整路径 (E:\... \raw\cloud_masked_output)
+    output_dir_path = os.path.join(base_dir, output_subdir_name)
+    
+    # 获取原始文件名用于生成新文件名
+    filename = os.path.basename(input_file)
+    name, ext = os.path.splitext(filename)
+    output_filename = f"{name}.tif"
+    
+    # 组合成最终的输出文件完整路径
+    output_file = os.path.join(output_dir_path, output_filename)
+
+    # 4. 执行函数
+    mask_clouds_and_dilate(
+        input_file, 
+        output_file, 
+        cloud_threshold, 
+        buffer_pixels, 
+        visualize=visualize_result
+    )

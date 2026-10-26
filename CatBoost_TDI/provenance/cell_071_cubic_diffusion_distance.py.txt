@@ -1,0 +1,102 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+
+# 输入输出路径
+excel_path = r"E:\ENVI\2024_12_Cloudless\output\2025.4\温度扩散范围_增选\high_reflect.xlsx"
+output_dir = r"E:\ENVI\2024_12_Cloudless\output\2025.4\温度扩散范围_增选\高反"
+os.makedirs(output_dir, exist_ok=True)
+
+# 读取 Excel 文件
+xls = pd.ExcelFile(excel_path)
+
+# 用于记录 x1 数据
+x1_data = []
+
+# 遍历每个 sheet
+for sheet_name in xls.sheet_names:
+    df = xls.parse(sheet_name)
+    df = df.sort_values(by='Distance')
+
+    # 原始数据
+    x = df['Distance'].values
+    y = df['LST'].values
+
+    # 三次多项式拟合
+    coeffs = np.polyfit(x, y, deg=3)
+    poly_func = np.poly1d(coeffs)
+
+    # 创建拟合曲线
+    x_fit = np.linspace(x.min(), x.max(), 500)
+    y_fit = poly_func(x_fit)
+
+    # 一阶导数判断符号变化点
+    derivative = np.polyder(poly_func)
+    deriv_values = derivative(x_fit)
+    sign_changes = np.diff(np.sign(deriv_values))
+    change_idx = np.where(sign_changes != 0)[0]
+
+    if len(change_idx) > 0:
+        first_change_idx = change_idx[0] + 1
+        x1 = x_fit[first_change_idx]
+        y1 = poly_func(x1)
+        y0 = poly_func(0)
+        delta_y = y1 - y0
+        print(f"Zone {sheet_name}: x1 = {x1:.2f}, y1 = {y1:.2f}, y0 = {y0:.2f}, Δy = {delta_y:.2f}")
+    else:
+        x1 = y1 = y0 = delta_y = np.nan
+        print(f"Zone {sheet_name}: 曲线拟合内无明显单调性变化")
+
+    # 保存 x1 数据
+    x1_data.append({'Zone': sheet_name, 'x1': x1, 'y1': y1, 'y0': y0, 'delta_y': delta_y})
+
+    # 绘图
+    plt.figure(figsize=(6, 5), dpi=200)
+    plt.plot(x, y, marker='o', label='LST')
+    plt.plot(x_fit, y_fit, color='red', linestyle='--', label='Cubic Fit')
+
+    if not np.isnan(x1):
+        plt.scatter(x1, y1, color='blue', marker='x', label=f'Change Point: x={x1:.1f}')
+        plt.axvline(x=x1, color='blue', linestyle=':', linewidth=1)
+
+    plt.title(f'Zone {sheet_name}')
+    plt.xlabel('Buffer Distance (m)')
+    plt.ylabel('Temperature (℃)')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+
+    # 保存拟合图
+    output_path = os.path.join(output_dir, f'Zone_{sheet_name}_Temperature_CubicFit.png')
+    plt.savefig(output_path, dpi=300)
+    plt.close()
+
+# 保存 x1 数据到 Excel
+x1_df = pd.DataFrame(x1_data)
+x1_excel_path = os.path.join(output_dir, 'x1_箱型图数据.xlsx')
+x1_df.to_excel(x1_excel_path, index=False)
+print(f"\nx1 数据已保存到: {x1_excel_path}")
+
+# 绘制 x1 箱型图
+x1_clean = x1_df.dropna(subset=['x1'])
+
+plt.figure(figsize=(5, 6), dpi=200)
+plt.boxplot(x1_clean['x1'], vert=True, patch_artist=True,
+            boxprops=dict(facecolor='skyblue', color='blue'),
+            medianprops=dict(color='red'),
+            whiskerprops=dict(color='blue'),
+            capprops=dict(color='blue'),
+            flierprops=dict(marker='o', markerfacecolor='gray', markersize=5, linestyle='none'))
+
+plt.ylabel('x1 Distance (m)')
+plt.title('Boxplot of x1 across Zones')
+plt.grid(axis='y', linestyle='--', alpha=0.6)
+plt.tight_layout()
+
+boxplot_path = os.path.join(output_dir, 'x1_箱型图.png')
+plt.savefig(boxplot_path, dpi=300)
+plt.close()
+
+print(f"x1 箱型图已保存为：{boxplot_path}")
+print(f"\n所有图像均已保存至：{output_dir}")

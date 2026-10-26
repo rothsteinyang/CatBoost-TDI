@@ -1,0 +1,52 @@
+{
+  "audit_date": "2026-10-26",
+  "sources": [
+    {
+      "notebook": "E:\\ENVI\\2025_08_CNN_CatBoost\\script\\2025.9 杂项代码.ipynb",
+      "cell_number_one_based": 9,
+      "cell_index_zero_based": 8,
+      "saved_as": "2025.9 杂项代码_cell_009.py.txt",
+      "source_sha256": "6b8843a71c8ec4d930d254d717e0788482a9a635fe3776715364dc7fad768372"
+    },
+    {
+      "notebook": "E:\\ENVI\\2025_08_CNN_CatBoost\\script\\2025.9 杂项代码.ipynb",
+      "cell_number_one_based": 15,
+      "cell_index_zero_based": 14,
+      "saved_as": "2025.9 杂项代码_cell_015.py.txt",
+      "source_sha256": "87704012fe234e9284554212a3eb30f742a852ab989744b783df8d2c6c264c62"
+    },
+    {
+      "notebook": "E:\\ENVI\\2025_08_CNN_CatBoost\\script\\2025_09_LST插值.ipynb",
+      "cell_number_one_based": 16,
+      "cell_index_zero_based": 15,
+      "saved_as": "2025_09_LST插值_cell_016.py.txt",
+      "source_sha256": "a79df2c8df200c57e382542135db8ea01703185762b0b1bc03db1773817e37af"
+    },
+    {
+      "notebook": "E:\\ENVI\\2025_08_CNN_CatBoost\\script\\2025_09_LST插值.ipynb",
+      "cell_number_one_based": 18,
+      "cell_index_zero_based": 17,
+      "saved_as": "2025_09_LST插值_cell_018.py.txt",
+      "source_sha256": "983431bead82cb42d15151566c2b49df73ed48be2e280688615b94a02cb41ca5"
+    },
+    {
+      "notebook": "E:\\ENVI\\2025_08_CNN_CatBoost\\script\\2025_09_LST插值.ipynb",
+      "cell_number_one_based": 22,
+      "cell_index_zero_based": 21,
+      "saved_as": "2025_09_LST插值_cell_022.py.txt",
+      "source_sha256": "0a06c52368bc6ee853fd940d959e1f3f6ad490b9f8f60194f0f3ac2e5454a307"
+    },
+    {
+      "notebook": "E:\\ENVI\\2025_08_CNN_CatBoost\\script\\波段合成.ipynb",
+      "cell_number_one_based": 2,
+      "cell_index_zero_based": 1,
+      "saved_as": "波段合成_cell_002.py.txt",
+      "source_sha256": "0a06c52368bc6ee853fd940d959e1f3f6ad490b9f8f60194f0f3ac2e5454a307"
+    },
+    {
+      "source": "E:\\ENVI\\2024_12_Cloudless\\data\\光谱指数_反照率_band_math.exp",
+      "saved_as": "original_spectral_band_math.exp.txt",
+      "source_sha256": "f37c8609b6561c716cff73be8ee2a2b2ca5184767a1d7a759bf1418c81633152"
+    }
+  ]
+}
