@@ -20,4 +20,4 @@
 
 [回归测试](../tests)覆盖观测保留、缺测处理、标定、网格、验证可见性、SHAP/消融和热扩散计算，使用独立的合成输入运行。试跑采用缩减参数，功能检查结果不等同于论文全部实验的精度复现。
 
-原始单元格、预处理表达式和出处记录保存在 [provenance](../provenance/manifest.json)及其[预处理归档](../provenance/preprocessing/manifest.json)。其中记录的历史路径仅表示原始来源；运行入口和功能测试使用当前项目中的代码与数据。论文引用见根目录 [README](../../README.md)。
+论文引用见根目录 [README](../../README.md)。

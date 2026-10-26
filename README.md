@@ -80,7 +80,6 @@ conda run -n TDI python -m CatBoost_TDI --help
 | `CatBoost_TDI/evaluation/` | 验证、SHAP、特征选择与消融 |
 | `CatBoost_TDI/configs/`、`CatBoost_TDI/examples/` | 模型参数与数据清单 |
 | `CatBoost_TDI/tests/` | 数值、栅格处理及重建功能测试 |
-| `CatBoost_TDI/provenance/` | 原始代码块、表达式及出处记录 |
 | `assets/` | 数据、目录索引与运行清单 |
 
 流程入口为[预处理](CatBoost_TDI/preprocessing/pipeline.py)和[重建](CatBoost_TDI/reconstruction/pipeline.py)。公共配置可通过 `from CatBoost_TDI import ModelConfig` 导入。项目根目录和默认数据目录根据代码位置计算，整目录移动后无需修改绝对路径。
