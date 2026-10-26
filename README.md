@@ -8,24 +8,24 @@
 
 该项目可在 Python 3.10 环境运行。
 
-# 1. 创建并激活环境
+### 1. 创建并激活环境
 ```powershell
 conda create -n TDI python=3.10
 conda activate TDI
 ```
 
-# 2. 克隆仓库并进入项目根目录
+### 2. 克隆仓库并进入项目根目录
 ```powershell
 git clone https://github.com/rothsteinyang/CatBoost-TDI.git
 Set-Location CatBoost-TDI
 ```
 
-# 3. 安装依赖
+### 3. 安装依赖
 ```powershell
 python -m pip install -r requirements.txt
 ```
 
-# 4. 检查命令入口
+### 4. 检查命令入口
 ```powershell
 python -m CatBoost_TDI --help
 ```
