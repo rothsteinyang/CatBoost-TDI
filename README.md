@@ -4,14 +4,30 @@
 
 实现依据见文末论文及[复现说明](CatBoost_TDI/docs/REPRODUCIBILITY.md)。
 
-## 环境
+## 开始
 
-已在 Python 3.10 环境验证。新建conda环境并安装需要的包：
+该项目可在 Python 3.10 环境运行。
 
+# 1. 创建并激活环境
 ```powershell
-Set-Location 'E:\ENVI\2025.6_TDI'
 conda create -n TDI python=3.10
-conda run -n TDI python -m pip install -r requirements.txt
+conda activate TDI
+```
+
+# 2. 克隆仓库并进入项目根目录
+```powershell
+git clone https://github.com/rothsteinyang/CatBoost-TDI.git
+Set-Location CatBoost-TDI
+```
+
+# 3. 安装依赖
+```powershell
+python -m pip install -r requirements.txt
+```
+
+# 4. 检查命令入口
+```powershell
+python -m CatBoost_TDI --help
 ```
 
 ## 数据
